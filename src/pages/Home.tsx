@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { displayName } from '../lib/types';
+import AnnouncementBanner from '../components/AnnouncementBanner';
 
 interface MiniApp {
   to: string;
@@ -80,6 +81,8 @@ export default function Home() {
   const { profile } = useAuth();
   return (
     <div className="space-y-8">
+      <AnnouncementBanner />
+
       <section>
         <h1 className="font-display text-3xl text-primary-900">
           Welcome{profile ? `, ${displayName(profile)}` : ''}.

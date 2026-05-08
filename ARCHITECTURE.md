@@ -102,7 +102,24 @@ The order isn't fixed; pick whatever's most fun next session. Rough estimates:
 
 - ✅ **Board Game Picker** (`src/pages/miniapps/BoardGameSelector.tsx`) — Library + Picker tabs, three pick modes (random / filtered / weighted-by-recency), "✨ Look it up" button calls the `enrich-board-game` Edge Function for AI auto-fill, **Veto Mode** (toggleable by Dictators) with both a Dictator-managed master list and per-user veto picks (limit configurable), "Select Game" flow records who played into `game_sessions` + `game_session_scores` and (when veto mode is on) clears all user vetoes.
 - ✅ **Game Record Book** (`src/pages/miniapps/BoardGameRecords.tsx`) — Four tabs: Recent Plays (chronological feed with click-to-edit `SessionEditor`, plus "📷 From photo" and "📊 From Excel (experimental)" import buttons), Player Stats (sortable leaderboard with horizontal-bar chart of wins), Game Stats (per-game leaderboard with bar chart of most-played), Head-to-Head (two-player picker with win tally, mini bar chart, and full session history). Pure stats logic in `src/lib/gameStats.ts`. Fuzzy matching of imported game/player names to existing rows in `src/lib/importMatching.ts`. Charts via Recharts. Excel parsing via SheetJS (`xlsx`) client-side; Photo compressed client-side via canvas before send. `ImportPreview` component reviews proposed sessions before bulk insert.
-- ✅ **Central Location Estimator** (`src/pages/miniapps/CentralLocation.tsx`) — Pre-populates attendees from active family members + their `profile.location`. Editable, with custom additions and "include?" checkbox. Optional context input. Calls `suggest-central-location` Edge Function. Result card shows recommended city + airport + reasoning + fairness note + alternates. Saved meet-ups stored in `central_location_queries` table for future reference.
+- ✅ **Central Location Estimator** (`src/pages/miniapps/CentralLocation.tsx`) — Pre-populates attendees from active family members + their `profile.location`. Editable, with custom additions and "include?" checkbox. Optional context input. Calls `suggest-central-location` Edge Function (which uses Google Geocoding + Claude). Result card shows recommended city + airport + reasoning + per-attendee drive-time fairness note + alternates, plus an interactive Google Map (`src/components/LocationMap.tsx`) with attendee markers, destination diamond, geographic-centroid dot, and geodesic polylines connecting each attendee to the destination. Saved meet-ups stored in `central_location_queries` table for future reference.
+- ✅ **Running Late / Early** (`src/pages/miniapps/RunningLateEarly.tsx`) — Three-button direction picker (🐢 Late / 🕐 On time / 🐰 Early), minute presets + custom input, optional event label with quick-fill from recent labels, optional note. Pinned "your latest ETA" card if you've posted in the last 24h. Color-coded family feed showing the past 24 hours by default with "Show older" toggle. Polls every 15s for new pings. Reads/writes `late_pings` table. Each insert also auto-creates a banner via the announcements trigger (see below).
+
+## Home-page announcement banners
+
+Reusable system for any cross-cutting "heads up" the family should see when they open the app.
+
+**Schema:** `announcements` (id, source, source_id, sender_id, emoji, message, variant, link_path, expires_at, is_active) + `announcement_dismissals` (announcement_id, profile_id) for per-user hide. Defined in `supabase/schema-announcements.sql`.
+
+**Component:** `src/components/AnnouncementBanner.tsx` — rendered at the top of `Home.tsx`. Polls every 30s. Each banner shows emoji, message, optional link to the source mini-app, an `✕` for per-user dismiss, and (for the original sender or any Dictator) a `Rescind` button that flips `is_active = false` for everyone.
+
+**How a mini-app posts a banner:**
+1. **Via DB trigger (cleanest):** like `create_announcement_for_late_ping()` — the trigger inserts a new announcement row whenever the source table gets a new row. Bonus: it also deactivates any prior active banner from the same sender so the home page doesn't pile up duplicates.
+2. **Via client insert:** the frontend can `supabase.from('announcements').insert({ source: 'manual', sender_id, emoji, message, variant, link_path, expires_at })`.
+
+**Variants** map to color schemes in the banner: `late` (amber), `early` (sky), `on_time` (emerald), `info` (purple), `warning` (warm), `success` (emerald). Add new variants by extending the `variantClass` map in the component.
+
+**Future uses:** new poll opened (Voting Portal), new meeting proposal (Meeting Scheduler), NCAA round complete (NCAA Pool), manual heads-up posts ("Aunt Marie is in the hospital"). Each just inserts an announcement row with its own `source` and a relevant `link_path`.
 
 ## Edge Functions (server-side helpers)
 
