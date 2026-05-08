@@ -9,6 +9,8 @@ import SessionEditor from '../../components/boardgames/SessionEditor';
 import { PlayerStatsTable, GameStatsTable } from '../../components/boardgames/StatsTables';
 import { PlayerWinsChart, GamePlaysChart } from '../../components/boardgames/StatsCharts';
 import HeadToHead from '../../components/boardgames/HeadToHead';
+import PhotoImport from '../../components/boardgames/PhotoImport';
+import ExcelImport from '../../components/boardgames/ExcelImport';
 
 type Tab = 'recent' | 'players' | 'games' | 'h2h';
 
@@ -124,6 +126,29 @@ export default function BoardGameRecords() {
         <>
           {tab === 'recent' && (
             <>
+              {!editingSession && (
+                <div className="card flex flex-wrap items-center gap-2">
+                  <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold mr-2 w-full sm:w-auto">
+                    Add sessions
+                  </p>
+                  <PhotoImport
+                    games={games}
+                    profiles={profiles}
+                    onImported={(n) => {
+                      load();
+                      if (n > 0) alert(`Imported ${n} session${n === 1 ? '' : 's'}.`);
+                    }}
+                  />
+                  <ExcelImport
+                    games={games}
+                    profiles={profiles}
+                    onImported={(n) => {
+                      load();
+                      if (n > 0) alert(`Imported ${n} session${n === 1 ? '' : 's'}.`);
+                    }}
+                  />
+                </div>
+              )}
               {counts.needsScores > 0 && !editingSession && (
                 <div className="card bg-warm-50 border-warm-500/30 text-warm-600 text-sm">
                   📝 {counts.needsScores} session{counts.needsScores === 1 ? '' : 's'} need scores or winners — click any "Needs scores" card to fill it in.

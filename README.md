@@ -133,13 +133,18 @@ Several mini-apps call Claude server-side so the API key stays secret. The first
    supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
    ```
 
-3. **Deploy the Edge Function.** The function code lives at `supabase/functions/enrich-board-game/index.ts`. Two paths:
+3. **Deploy the Edge Functions.** Three functions to deploy. All read the same `ANTHROPIC_API_KEY` secret. For each:
 
-   **(a) Dashboard:** Supabase → Edge Functions → **Deploy a new function** → name it exactly `enrich-board-game` → paste the contents of `supabase/functions/enrich-board-game/index.ts` into the editor → click Deploy.
+   **(a) Dashboard:** Supabase → Edge Functions → **Deploy a new function** → name it exactly as listed → paste the contents of `supabase/functions/<NAME>/index.ts` into the editor → click Deploy.
 
-   **(b) CLI:** `supabase functions deploy enrich-board-game`
+   **(b) CLI:** `supabase functions deploy <NAME>`
 
-4. **Test it.** In the app, open Board Game Picker → The Shelf → Add a game → type a name like `Catan` → click **✨ Look it up**. The other fields should fill in within a couple of seconds.
+   The functions:
+   - **`enrich-board-game`** — game-name → structured details (used by the Board Game Picker's "✨ Look it up" button).
+   - **`transcribe-game-photo`** — photo of a scoresheet → suggested session (used by the Game Record Book's "📷 From photo" button). Multimodal — uses Claude's vision capability.
+   - **`parse-game-spreadsheet`** — uploaded Excel cells → suggested batch of sessions (used by the Game Record Book's "📊 From Excel" button, **experimental**).
+
+4. **Test it.** In the app, open Board Game Picker → The Shelf → Add a game → type a name like `Catan` → click **✨ Look it up**. The other fields should fill in within a couple of seconds. Then try Game Record Book → Recent Plays → "📷 From photo" with any photo of a scoresheet.
 
 ### Cost note
 

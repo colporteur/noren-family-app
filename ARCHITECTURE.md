@@ -101,7 +101,7 @@ The order isn't fixed; pick whatever's most fun next session. Rough estimates:
 ### Built so far
 
 - ✅ **Board Game Picker** (`src/pages/miniapps/BoardGameSelector.tsx`) — Library + Picker tabs, three pick modes (random / filtered / weighted-by-recency), "✨ Look it up" button calls the `enrich-board-game` Edge Function for AI auto-fill, **Veto Mode** (toggleable by Dictators) with both a Dictator-managed master list and per-user veto picks (limit configurable), "Select Game" flow records who played into `game_sessions` + `game_session_scores` and (when veto mode is on) clears all user vetoes.
-- ✅ **Game Record Book** (`src/pages/miniapps/BoardGameRecords.tsx`) — Four tabs: Recent Plays (chronological feed with click-to-edit `SessionEditor`), Player Stats (sortable leaderboard with horizontal-bar chart of wins), Game Stats (per-game leaderboard with bar chart of most-played), Head-to-Head (two-player picker with win tally, mini bar chart, and full session history). Pure stats logic in `src/lib/gameStats.ts`. Charts via Recharts. Each session can have score and placement updated after the fact; `placement = 1` means "won" (multiple winners allowed for ties or co-op games).
+- ✅ **Game Record Book** (`src/pages/miniapps/BoardGameRecords.tsx`) — Four tabs: Recent Plays (chronological feed with click-to-edit `SessionEditor`, plus "📷 From photo" and "📊 From Excel (experimental)" import buttons), Player Stats (sortable leaderboard with horizontal-bar chart of wins), Game Stats (per-game leaderboard with bar chart of most-played), Head-to-Head (two-player picker with win tally, mini bar chart, and full session history). Pure stats logic in `src/lib/gameStats.ts`. Fuzzy matching of imported game/player names to existing rows in `src/lib/importMatching.ts`. Charts via Recharts. Excel parsing via SheetJS (`xlsx`) client-side; Photo compressed client-side via canvas before send. `ImportPreview` component reviews proposed sessions before bulk insert.
 
 ## Edge Functions (server-side helpers)
 
@@ -110,6 +110,8 @@ These hold any secret API keys (e.g. `ANTHROPIC_API_KEY`) and are invoked from t
 | Name | What it does | Used by |
 |------|--------------|---------|
 | `enrich-board-game` | Takes `{ name }`, calls Claude (Haiku, tool use) to return structured `{ confidence, min_players, max_players, typical_minutes, weight, tags, notes, canonical_name }`. | Board Game Picker → GameForm "Look it up" button. |
+| `transcribe-game-photo` | Takes `{ imageBase64, mediaType }`, calls Claude (Haiku, vision + tool use) to return `{ sessions[], confidence, source_notes }`. Each session has `game_name`, `played_on`, `notes`, `players[]`. | Game Record Book → Recent Plays → "📷 From photo". |
+| `parse-game-spreadsheet` | Takes `{ sheets[] }` (each a 2D cell array), calls Claude with the cells rendered as text and the same `record_game_sessions` tool. Returns suggested sessions across all sheets. | Game Record Book → Recent Plays → "📊 From Excel" (experimental). |
 
 **Pattern for adding new Claude-powered functions:**
 1. Copy `enrich-board-game/index.ts` as a template.
