@@ -466,6 +466,14 @@ create trigger trg_late_ping_banner
   for each row execute function public.create_announcement_for_late_ping();
 
 -- =========================================================================
+-- 12) Voting Portal additions (column on existing votes_polls)
+--     See also supabase/schema-voting.sql
+-- =========================================================================
+
+alter table public.votes_polls
+  add column if not exists hide_results_until_close boolean not null default false;
+
+-- =========================================================================
 -- Bootstrapping note:
 --   The very first user who signs in will automatically be made a 'dictator'.
 --   To promote a second dictator, run from SQL Editor:
