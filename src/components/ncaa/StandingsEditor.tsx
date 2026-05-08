@@ -100,26 +100,48 @@ export default function StandingsEditor({ poolYear, standings, profiles, onChang
     setBusy(true);
     setError(null);
 
-    // Validate
-    const cleaned = rows.map((r, i) => {
-      const points = parseInt(r.points, 10);
-      if (!Number.isFinite(points)) {
-        throw new Error(`Row ${i + 1}: points isn't a number.`);
-      }
+    // Validate — collect errors instead of throwing so we never leave busy=true
+    const validationErrors: string[] = [];
+    const cleaned: Array<{
+      id: string | null;
+      pool_year: number;
+      profile_id: string | null;
+      bracket_name: string | null;
+      points: number;
+      notes: string | null;
+    }> = [];
+    rows.forEach((r, i) => {
       const profile_id = r.profile_id || null;
       const bracket_name = r.bracket_name.trim();
       if (!profile_id && !bracket_name) {
-        throw new Error(`Row ${i + 1}: pick a family member or enter a bracket name.`);
+        validationErrors.push(`Row ${i + 1}: pick a family member or type a bracket name.`);
+        return;
       }
-      return {
+      const pointsStr = r.points.trim();
+      if (pointsStr === '') {
+        validationErrors.push(`Row ${i + 1}: points is empty.`);
+        return;
+      }
+      const points = parseInt(pointsStr, 10);
+      if (!Number.isFinite(points)) {
+        validationErrors.push(`Row ${i + 1}: "${r.points}" isn't a number.`);
+        return;
+      }
+      cleaned.push({
         id: r.id,
         pool_year: poolYear,
         profile_id,
         bracket_name: profile_id ? null : bracket_name,
         points,
         notes: r.notes.trim() || null,
-      };
+      });
     });
+
+    if (validationErrors.length > 0) {
+      setError(validationErrors.join(' '));
+      setBusy(false);
+      return;
+    }
 
     try {
       // Compute the IDs we kept; anything in original not in new = delete
