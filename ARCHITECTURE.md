@@ -98,6 +98,25 @@ The order isn't fixed; pick whatever's most fun next session. Rough estimates:
 | 8 | Meeting Scheduler | Medium | Three modes (ranked / available / vote); tricky UI. |
 | 9 | Running Late/Early | Easy | Feed + push notification (browser API). |
 
+### Built so far
+
+- ✅ **Board Game Picker** (`src/pages/miniapps/BoardGameSelector.tsx`) — Library + Picker tabs, three pick modes (random / filtered / weighted-by-recency), "Mark as played" feeds `game_sessions`, "✨ Look it up" button calls the `enrich-board-game` Edge Function for AI auto-fill.
+
+## Edge Functions (server-side helpers)
+
+These hold any secret API keys (e.g. `ANTHROPIC_API_KEY`) and are invoked from the frontend with `supabase.functions.invoke(name, { body })`. Each lives at `supabase/functions/<name>/index.ts`.
+
+| Name | What it does | Used by |
+|------|--------------|---------|
+| `enrich-board-game` | Takes `{ name }`, calls Claude (Haiku, tool use) to return structured `{ confidence, min_players, max_players, typical_minutes, weight, tags, notes, canonical_name }`. | Board Game Picker → GameForm "Look it up" button. |
+
+**Pattern for adding new Claude-powered functions:**
+1. Copy `enrich-board-game/index.ts` as a template.
+2. Adjust the `recordTool` schema for whatever structured fields you want back.
+3. Adjust the prompt in the `messages` array.
+4. Deploy via dashboard or `supabase functions deploy <name>`.
+5. Reuses the same `ANTHROPIC_API_KEY` secret — no extra setup needed once the first function is wired up.
+
 ## Things explicitly deferred
 
 - **Push notifications** — the manifest is ready; we'll add `web-push` and a Supabase function once a mini-app needs it (likely Running Late/Early).

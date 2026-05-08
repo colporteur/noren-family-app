@@ -114,15 +114,36 @@ The home page reads from a list at the top of `src/pages/Home.tsx`. To add a ten
 
 ---
 
-## Setting up the Claude API key (for the Central Location app, later)
+## Setting up the Claude API key (for game lookup, Central Location, etc.)
 
-The Central Location Estimator needs to call Claude server-side so the API key stays secret. Plan:
+Several mini-apps call Claude server-side so the API key stays secret. The first one that uses it is the Board Game Picker's "✨ Look it up" button, which auto-fills game details from just a name. The setup below is one-time; future Claude-powered features will reuse the same key.
 
-1. Get an Anthropic API key from [console.anthropic.com](https://console.anthropic.com).
-2. Install the Supabase CLI: `npm install -g supabase`.
-3. From the project root: `supabase login`, then `supabase link --project-ref YOUR-REF`.
-4. `supabase secrets set ANTHROPIC_API_KEY=sk-ant-...`
-5. We'll create the Edge Function in the session that builds that mini-app.
+### One-time setup
+
+1. **Get an Anthropic API key** at [console.anthropic.com](https://console.anthropic.com) → Settings → API Keys → Create Key. Copy the `sk-ant-...` value.
+
+2. **Add it as a Supabase secret.** Two paths:
+
+   **(a) Dashboard (easiest, no CLI needed):** Supabase → Project Settings → Edge Functions → **Manage Secrets** → click **Add new secret** → Name: `ANTHROPIC_API_KEY`, Value: `sk-ant-...`. Save.
+
+   **(b) CLI:** if you've installed the Supabase CLI (`npm install -g supabase`), then from the project folder:
+   ```bash
+   supabase login
+   supabase link --project-ref YOUR-PROJECT-REF
+   supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
+   ```
+
+3. **Deploy the Edge Function.** The function code lives at `supabase/functions/enrich-board-game/index.ts`. Two paths:
+
+   **(a) Dashboard:** Supabase → Edge Functions → **Deploy a new function** → name it exactly `enrich-board-game` → paste the contents of `supabase/functions/enrich-board-game/index.ts` into the editor → click Deploy.
+
+   **(b) CLI:** `supabase functions deploy enrich-board-game`
+
+4. **Test it.** In the app, open Board Game Picker → The Shelf → Add a game → type a name like `Catan` → click **✨ Look it up**. The other fields should fill in within a couple of seconds.
+
+### Cost note
+
+Each lookup uses Claude Haiku (the smallest, fastest, cheapest model) and a tiny prompt — well under one cent per lookup. Filling in 100+ games once costs pennies.
 
 ---
 
