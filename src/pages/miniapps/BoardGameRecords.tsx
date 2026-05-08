@@ -7,8 +7,10 @@ import type { Profile } from '../../lib/types';
 import SessionList from '../../components/boardgames/SessionList';
 import SessionEditor from '../../components/boardgames/SessionEditor';
 import { PlayerStatsTable, GameStatsTable } from '../../components/boardgames/StatsTables';
+import { PlayerWinsChart, GamePlaysChart } from '../../components/boardgames/StatsCharts';
+import HeadToHead from '../../components/boardgames/HeadToHead';
 
-type Tab = 'recent' | 'players' | 'games';
+type Tab = 'recent' | 'players' | 'games' | 'h2h';
 
 export default function BoardGameRecords() {
   const [tab, setTab] = useState<Tab>('recent');
@@ -86,12 +88,13 @@ export default function BoardGameRecords() {
       </header>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-white border border-primary-100 rounded-lg p-1 shadow-soft w-fit">
+      <div className="flex gap-1 bg-white border border-primary-100 rounded-lg p-1 shadow-soft w-fit overflow-x-auto max-w-full">
         {(
           [
             ['recent', 'Recent Plays'],
             ['players', 'Player Stats'],
             ['games', 'Game Stats'],
+            ['h2h', 'Head-to-Head'],
           ] as const
         ).map(([id, label]) => (
           <button
@@ -155,19 +158,38 @@ export default function BoardGameRecords() {
           )}
 
           {tab === 'players' && (
-            <PlayerStatsTable
-              sessions={sessions}
-              scores={scores}
-              profiles={profiles.filter((p) => !p.is_deceased)}
-            />
+            <div className="space-y-4">
+              <PlayerWinsChart
+                sessions={sessions}
+                scores={scores}
+                profiles={profiles.filter((p) => !p.is_deceased)}
+              />
+              <PlayerStatsTable
+                sessions={sessions}
+                scores={scores}
+                profiles={profiles.filter((p) => !p.is_deceased)}
+              />
+            </div>
           )}
 
           {tab === 'games' && (
-            <GameStatsTable
+            <div className="space-y-4">
+              <GamePlaysChart sessions={sessions} scores={scores} games={games} />
+              <GameStatsTable
+                sessions={sessions}
+                scores={scores}
+                games={games}
+                profiles={profiles}
+              />
+            </div>
+          )}
+
+          {tab === 'h2h' && (
+            <HeadToHead
+              games={games}
               sessions={sessions}
               scores={scores}
-              games={games}
-              profiles={profiles}
+              profiles={profiles.filter((p) => !p.is_deceased)}
             />
           )}
         </>

@@ -101,7 +101,7 @@ The order isn't fixed; pick whatever's most fun next session. Rough estimates:
 ### Built so far
 
 - ✅ **Board Game Picker** (`src/pages/miniapps/BoardGameSelector.tsx`) — Library + Picker tabs, three pick modes (random / filtered / weighted-by-recency), "✨ Look it up" button calls the `enrich-board-game` Edge Function for AI auto-fill, **Veto Mode** (toggleable by Dictators) with both a Dictator-managed master list and per-user veto picks (limit configurable), "Select Game" flow records who played into `game_sessions` + `game_session_scores` and (when veto mode is on) clears all user vetoes.
-- ✅ **Game Record Book** (`src/pages/miniapps/BoardGameRecords.tsx`) — Three tabs: Recent Plays (chronological feed with click-to-edit `SessionEditor`), Player Stats (sortable leaderboard: wins, plays, win rate, games), Game Stats (per-game leaderboard with top winner, high score, biggest blowout). Pure stats logic in `src/lib/gameStats.ts`. Each session can have score and placement updated after the fact; `placement = 1` means "won" (multiple winners allowed for ties or co-op games).
+- ✅ **Game Record Book** (`src/pages/miniapps/BoardGameRecords.tsx`) — Four tabs: Recent Plays (chronological feed with click-to-edit `SessionEditor`), Player Stats (sortable leaderboard with horizontal-bar chart of wins), Game Stats (per-game leaderboard with bar chart of most-played), Head-to-Head (two-player picker with win tally, mini bar chart, and full session history). Pure stats logic in `src/lib/gameStats.ts`. Charts via Recharts. Each session can have score and placement updated after the fact; `placement = 1` means "won" (multiple winners allowed for ties or co-op games).
 
 ## Edge Functions (server-side helpers)
 
