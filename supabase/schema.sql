@@ -490,6 +490,40 @@ alter table public.votes_polls
   add column if not exists hide_results_until_close boolean not null default false;
 
 -- =========================================================================
+-- 13) NCAA Tournament Pool — per-year metadata
+--     See also supabase/schema-ncaa.sql
+-- =========================================================================
+
+create table if not exists public.ncaa_pool_years (
+    pool_year int primary key,
+    title text,
+    is_finalized boolean not null default false,
+    winner_profile_id uuid references public.profiles(id) on delete set null,
+    winner_bracket_name text,
+    loser_profile_id uuid references public.profiles(id) on delete set null,
+    loser_bracket_name text,
+    notes text,
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now()
+);
+
+drop trigger if exists trg_ncaa_year_updated_at on public.ncaa_pool_years;
+create trigger trg_ncaa_year_updated_at
+  before update on public.ncaa_pool_years
+  for each row execute function public.tg_set_updated_at();
+
+alter table public.ncaa_pool_years enable row level security;
+
+drop policy if exists "Authed read ncaa_pool_years" on public.ncaa_pool_years;
+create policy "Authed read ncaa_pool_years"
+  on public.ncaa_pool_years for select to authenticated using (true);
+
+drop policy if exists "Authed write ncaa_pool_years" on public.ncaa_pool_years;
+create policy "Authed write ncaa_pool_years"
+  on public.ncaa_pool_years for all to authenticated
+  using (true) with check (true);
+
+-- =========================================================================
 -- Bootstrapping note:
 --   The very first user who signs in will automatically be made a 'dictator'.
 --   To promote a second dictator, run from SQL Editor:
