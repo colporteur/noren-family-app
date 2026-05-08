@@ -143,12 +143,63 @@ Several mini-apps call Claude server-side so the API key stays secret. The first
    - **`enrich-board-game`** — game-name → structured details (used by the Board Game Picker's "✨ Look it up" button).
    - **`transcribe-game-photo`** — photo of a scoresheet → suggested session (used by the Game Record Book's "📷 From photo" button). Multimodal — uses Claude's vision capability.
    - **`parse-game-spreadsheet`** — uploaded Excel cells → suggested batch of sessions (used by the Game Record Book's "📊 From Excel" button, **experimental**).
+   - **`suggest-central-location`** — list of family members + cities → recommended central US city plus alternates (used by the Central Location Estimator).
 
 4. **Test it.** In the app, open Board Game Picker → The Shelf → Add a game → type a name like `Catan` → click **✨ Look it up**. The other fields should fill in within a couple of seconds. Then try Game Record Book → Recent Plays → "📷 From photo" with any photo of a scoresheet.
 
 ### Cost note
 
 Each lookup uses Claude Haiku (the smallest, fastest, cheapest model) and a tiny prompt — well under one cent per lookup. Filling in 100+ games once costs pennies.
+
+---
+
+## Setting up the Google Maps API (for the Central Location Estimator)
+
+The Central Location Estimator uses Google's Geocoding API to convert city names to precise coordinates and to find the actual city at the geographic centroid. This makes the math reliable instead of asking Claude to guess.
+
+### One-time setup
+
+1. **Create a Google Cloud project.** Go to [console.cloud.google.com](https://console.cloud.google.com), sign in with any Google account, and click **New Project**. Name it whatever (e.g. `noren-family-app`).
+
+2. **Enable billing.** Settings → Billing → Link a billing account. You have to add a credit card, but you'll get a $200/month free credit that more than covers any family-scale usage. Geocoding is $5 per 1,000 calls — even running 100 location queries per month costs ~$2 (covered by the credit).
+
+3. **Enable the Geocoding API.** In the Cloud Console: APIs & Services → Library → search for **"Geocoding API"** → click it → **Enable**.
+
+4. **Create an API key.** APIs & Services → Credentials → **Create Credentials → API key**. Copy the key.
+
+5. **(Recommended) Restrict the key.** While the key dialog is open, click **Edit API key**. Under "API restrictions" pick **Restrict key** → check **Geocoding API** only. (Don't restrict by IP — Supabase Edge Functions use rotating IPs.)
+
+6. **Add the key to Supabase secrets.** Supabase → Project Settings → Edge Functions → Manage Secrets. Add a new secret:
+   - Name: `GOOGLE_MAPS_API_KEY`
+   - Value: paste the key
+
+7. **Redeploy the function.** Open `supabase/functions/suggest-central-location/index.ts`, copy contents, paste into the Supabase dashboard editor for the existing function, click Deploy.
+
+### Browser-side key (for the map visualization)
+
+The Central Location Estimator also displays a map with markers and lines from each attendee to the recommended location. Maps JavaScript runs in the browser, so it needs a separate API key locked to your domain.
+
+1. **Enable the Maps JavaScript API.** Cloud Console → APIs & Services → Library → search **"Maps JavaScript API"** → Enable.
+
+2. **Create a second API key.** APIs & Services → Credentials → Create Credentials → API key. Copy it.
+
+3. **Restrict it tightly:**
+   - **API restrictions:** check **Restrict key**, select only **Maps JavaScript API**.
+   - **Application restrictions:** select **Websites** (HTTP referrers). Add:
+     - `https://family.thenorens.net/*`
+     - `http://localhost:5173/*` (for local dev)
+     - Add any other domains you'll deploy to.
+   - This is what makes it safe to ship the key to the browser — the key only works from your sites.
+
+4. **Add to your frontend env:**
+   - **Local dev:** edit `.env.local`, set `VITE_GOOGLE_MAPS_BROWSER_KEY=...` (your new key). Restart `npm run dev`.
+   - **Vercel production:** Vercel → Project → Settings → Environment Variables → add `VITE_GOOGLE_MAPS_BROWSER_KEY` with the same value. Redeploy.
+
+5. **Test.** Run a Central Location query. After the recommendation appears, you should see a map below it with attendee markers, a destination diamond, and lines connecting them.
+
+### Cost note
+
+All Google Maps APIs combined essentially free at family scale. A typical Central Location query uses ~5-15 geocoding calls + 1 Maps JavaScript load. The $200/month free credit covers tens of thousands of calls. You will not be charged in normal usage.
 
 ---
 

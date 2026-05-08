@@ -342,6 +342,32 @@ create policy "Users manage own vetoes"
   with check (auth.uid() = profile_id or public.is_dictator());
 
 -- =========================================================================
+-- 10) Central Location Estimator
+--     See also supabase/schema-central-location.sql
+-- =========================================================================
+
+create table if not exists public.central_location_queries (
+    id uuid primary key default gen_random_uuid(),
+    requested_by uuid references public.profiles(id) on delete set null,
+    title text,
+    locations_in jsonb not null,
+    context text,
+    result jsonb not null,
+    created_at timestamptz not null default now()
+);
+
+alter table public.central_location_queries enable row level security;
+
+drop policy if exists "All authed read central_location_queries" on public.central_location_queries;
+create policy "All authed read central_location_queries"
+  on public.central_location_queries for select to authenticated using (true);
+
+drop policy if exists "All authed write central_location_queries" on public.central_location_queries;
+create policy "All authed write central_location_queries"
+  on public.central_location_queries for all to authenticated
+  using (true) with check (true);
+
+-- =========================================================================
 -- Bootstrapping note:
 --   The very first user who signs in will automatically be made a 'dictator'.
 --   To promote a second dictator, run from SQL Editor:
