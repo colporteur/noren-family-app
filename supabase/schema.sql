@@ -219,28 +219,44 @@ create table if not exists public.votes_ballots (
     unique (poll_id, voter_id, option_id)
 );
 
+-- Meeting Scheduler: proposals → options → responses (per-option).
+-- Reworked from the original single-option schema. See schema-meetings.sql.
 create table if not exists public.meeting_proposals (
     id uuid primary key default gen_random_uuid(),
     title text not null,
     purpose text,
-    location text,
-    proposed_at timestamptz,
-    created_by uuid references public.profiles(id) on delete set null,
     mode text not null default 'available' check (mode in ('available','voting','ranked')),
+    created_by uuid references public.profiles(id) on delete set null,
+    closes_at timestamptz,
     is_open boolean not null default true,
+    created_at timestamptz not null default now()
+);
+
+create table if not exists public.meeting_options (
+    id uuid primary key default gen_random_uuid(),
+    proposal_id uuid not null references public.meeting_proposals(id) on delete cascade,
+    starts_at timestamptz,
+    location text,
+    label text,
+    sort_order int not null default 0,
     created_at timestamptz not null default now()
 );
 
 create table if not exists public.meeting_responses (
     id uuid primary key default gen_random_uuid(),
-    proposal_id uuid not null references public.meeting_proposals(id) on delete cascade,
+    option_id uuid not null references public.meeting_options(id) on delete cascade,
     profile_id uuid not null references public.profiles(id) on delete cascade,
-    response text not null,           -- 'yes','no','maybe', or rank, or 'available'
+    response text check (response in ('yes','no','maybe')),
     rank int,
     note text,
     created_at timestamptz not null default now(),
-    unique (proposal_id, profile_id)
+    unique (option_id, profile_id)
 );
+
+create index if not exists meeting_options_proposal_idx
+  on public.meeting_options (proposal_id, sort_order);
+create index if not exists meeting_responses_option_idx
+  on public.meeting_responses (option_id);
 
 create table if not exists public.late_pings (
     id uuid primary key default gen_random_uuid(),
@@ -262,7 +278,7 @@ begin
       'board_games','game_sessions','game_session_scores',
       'ncaa_pool_standings','plaques',
       'votes_polls','votes_options','votes_ballots',
-      'meeting_proposals','meeting_responses',
+      'meeting_proposals','meeting_options','meeting_responses',
       'late_pings'
     ])
   loop
