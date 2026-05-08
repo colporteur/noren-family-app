@@ -1,7 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import type { BoardGame, GameSession } from '../../lib/boardGames';
+import type {
+  AppSettings,
+  BoardGame,
+  GameSession,
+  MasterVeto,
+  UserVeto,
+} from '../../lib/boardGames';
+import type { Profile } from '../../lib/types';
 import GamePicker from '../../components/boardgames/GamePicker';
 import GameLibrary from '../../components/boardgames/GameLibrary';
 
@@ -11,21 +18,59 @@ export default function BoardGameSelector() {
   const [tab, setTab] = useState<Tab>('pick');
   const [games, setGames] = useState<BoardGame[]>([]);
   const [sessions, setSessions] = useState<GameSession[]>([]);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [settings, setSettings] = useState<AppSettings | null>(null);
+  const [masterVetoes, setMasterVetoes] = useState<MasterVeto[]>([]);
+  const [userVetoes, setUserVetoes] = useState<UserVeto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [gamesRes, sessionsRes] = await Promise.all([
+    const [
+      gamesRes,
+      sessionsRes,
+      profilesRes,
+      settingsRes,
+      masterRes,
+      userRes,
+    ] = await Promise.all([
       supabase.from('board_games').select('*').order('name', { ascending: true }),
       supabase.from('game_sessions').select('*'),
+      supabase
+        .from('profiles')
+        .select('*')
+        .eq('is_deceased', false)
+        .order('first_name', { ascending: true }),
+      supabase.from('app_settings').select('*').eq('id', 1).maybeSingle(),
+      supabase.from('master_vetoes').select('*'),
+      supabase.from('user_vetoes').select('*'),
     ]);
-    if (gamesRes.error) setError(gamesRes.error.message);
-    else setGames((gamesRes.data ?? []) as BoardGame[]);
 
-    if (sessionsRes.error) setError(sessionsRes.error.message);
-    else setSessions((sessionsRes.data ?? []) as GameSession[]);
+    let firstError: string | null = null;
+    const setErr = (e: { message: string } | null) => {
+      if (e && !firstError) firstError = e.message;
+    };
 
+    setErr(gamesRes.error);
+    if (!gamesRes.error) setGames((gamesRes.data ?? []) as BoardGame[]);
+
+    setErr(sessionsRes.error);
+    if (!sessionsRes.error) setSessions((sessionsRes.data ?? []) as GameSession[]);
+
+    setErr(profilesRes.error);
+    if (!profilesRes.error) setProfiles((profilesRes.data ?? []) as Profile[]);
+
+    setErr(settingsRes.error);
+    if (!settingsRes.error) setSettings((settingsRes.data ?? null) as AppSettings | null);
+
+    setErr(masterRes.error);
+    if (!masterRes.error) setMasterVetoes((masterRes.data ?? []) as MasterVeto[]);
+
+    setErr(userRes.error);
+    if (!userRes.error) setUserVetoes((userRes.data ?? []) as UserVeto[]);
+
+    setError(firstError);
     setLoading(false);
   }, []);
 
@@ -92,9 +137,24 @@ export default function BoardGameSelector() {
       {loading ? (
         <p className="text-slate-500">Loading the shelf…</p>
       ) : tab === 'pick' ? (
-        <GamePicker games={games} sessions={sessions} onPlayed={load} />
+        <GamePicker
+          games={games}
+          sessions={sessions}
+          profiles={profiles}
+          settings={settings}
+          masterVetoes={masterVetoes}
+          userVetoes={userVetoes}
+          onPlayed={load}
+        />
       ) : (
-        <GameLibrary games={games} sessions={sessions} onChanged={load} />
+        <GameLibrary
+          games={games}
+          sessions={sessions}
+          settings={settings}
+          masterVetoes={masterVetoes}
+          userVetoes={userVetoes}
+          onChanged={load}
+        />
       )}
     </div>
   );

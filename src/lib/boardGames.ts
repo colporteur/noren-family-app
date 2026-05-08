@@ -24,6 +24,46 @@ export interface GameSession {
   created_at: string;
 }
 
+/* ---------------- Veto types ---------------- */
+
+export interface AppSettings {
+  id: number;
+  veto_mode_enabled: boolean;
+  max_user_vetoes: number;
+  updated_at: string;
+}
+
+export interface MasterVeto {
+  game_id: string;
+  reason: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface UserVeto {
+  id: string;
+  game_id: string;
+  profile_id: string;
+  created_at: string;
+}
+
+/**
+ * The set of game IDs that should be excluded from any pick when veto mode
+ * is on. Combines the master list and every family member's user vetoes.
+ * Returns an empty set when veto mode is off.
+ */
+export function buildVetoedSet(
+  settings: AppSettings | null,
+  masterVetoes: MasterVeto[],
+  userVetoes: UserVeto[],
+): Set<string> {
+  if (!settings?.veto_mode_enabled) return new Set();
+  const out = new Set<string>();
+  for (const m of masterVetoes) out.add(m.game_id);
+  for (const u of userVetoes) out.add(u.game_id);
+  return out;
+}
+
 export interface PickFilters {
   /** Number of people who'll play. Filters out games whose min/max range doesn't include it. */
   playerCount?: number;
@@ -35,12 +75,15 @@ export interface PickFilters {
   requiredTags?: string[];
   /** If true, exclude games marked as not owned. */
   ownedOnly?: boolean;
+  /** Game IDs that are vetoed (master list + user lists, combined). Excluded from picks. */
+  vetoedIds?: Set<string>;
 }
 
 /* ---------------- Filtering ---------------- */
 
 export function applyFilters(games: BoardGame[], f: PickFilters): BoardGame[] {
   return games.filter((g) => {
+    if (f.vetoedIds && f.vetoedIds.has(g.id)) return false;
     if (f.ownedOnly && !g.is_owned) return false;
 
     if (f.playerCount != null) {
